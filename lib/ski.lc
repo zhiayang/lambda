@@ -1,0 +1,13 @@
+# lib.lc
+# builtin stuff for lambda calculus interpreter
+
+# style setup
+:p
+:c
+:h
+
+let I = \x -> x
+let id = I
+
+let K = \x y -> x
+let S = \x y z -> x z (y z)
