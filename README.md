@@ -44,4 +44,22 @@ You can also use the `:load` directive, either in the REPL or in a file itself (
 Note that include loops are not handled, and you'll crash the interpreter.
 
 
+### example
 
+Here is some example output:
+```
+*. parenthesis omission enabled
+*. curried abbreviation enabled
+*. haskell-style printing enabled
+*. loaded 13 lines from 'lib/ski.lc'
+λ> S K K
+0. (\x y z -> x z (y z)) (\x y -> x) (\x y -> x)
+1. β-red: x <- (\x y -> x)
+2. β-red: y <- (\x y -> x)
+3. β-red: x <- z
+4. β-red: y <- (\x y -> x) z
+*. done.
+(\z -> z)
+
+λ>
+```
