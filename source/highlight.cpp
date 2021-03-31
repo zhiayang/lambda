@@ -29,6 +29,7 @@ namespace lc
 
 		std::function<std::optional<std::string> (const ast::Expr*)> pred;
 		std::function<std::optional<std::string> (const ast::Expr*)> arg_pred;
+		std::function<std::optional<std::string> (const ast::Expr*)> replacer;
 
 		// internal state
 		// int match_depth = 0;
@@ -64,6 +65,15 @@ namespace lc
 				ret += c;
 			return ret;
 		};
+
+		if(st.replacer)
+		{
+			if(auto rep = st.replacer(expr); rep.has_value())
+			{
+				add(*rep, repeat(rep->size(), under));
+				return;
+			}
+		}
 
 		if(auto v = dynamic_cast<const Var*>(expr); v)
 		{
@@ -212,5 +222,21 @@ namespace lc
 			[](auto) { return std::nullopt; },
 			[](auto) { return std::nullopt; },
 		flags).first;
+	}
+
+	std::string print(const ast::Expr* expr, std::function<std::optional<std::string> (const ast::Expr*)> replace,
+		int flags)
+	{
+		State st {
+			.pred = [](auto) { return std::nullopt; },
+			.arg_pred = [](auto) { return std::nullopt; },
+			.replacer = std::move(replace),
+			.flags = flags
+		};
+
+		std::string top, bot;
+		int_highlight(st, expr, top, bot);
+
+		return top;
 	}
 }

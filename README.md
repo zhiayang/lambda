@@ -30,8 +30,9 @@ let I = \x -> x
 S K K == I
 ```
 
-Right now, the interpreter cannot 'back-substitute' variables, so even when it sees `λx.x`, it doesn't know that
-it's equivalent to `I`.
+If the `FLAG_VAR_REPLACEMENT` flag (toggle with `:v`) is used, the interpreter will attempt to back-substitute the
+end result of an evaluation by using alpha-equivalence; for example, when doing `S K K`, instead of showing `λx.x`,
+it will show `I` if an alpha-equivalent definition of `I` is available.
 
 
 ### load
@@ -63,3 +64,17 @@ Here is some example output:
 
 λ>
 ```
+
+
+### repl commands
+
+| command       | function                                                  |
+|---------------|-----------------------------------------------------------|
+| `:q`          | quit the repl                                             |
+| `:t`          | enable (basic) tracing (shows α and β steps)              |
+| `:ft`         | enable full tracing (detailed substitution)               |
+| `:v`          | enable back-substitution for the result                   |
+| `:p`          | enable omitting unambiguous parentheses when printing     |
+| `:c`          | enable shorthand notation when printing curried functions |
+| `:h`          | enable haskell-style notation when printing               |
+| `:load`       | load a file (eg. `:load foo.lc`) and add it to the context|

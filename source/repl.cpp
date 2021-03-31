@@ -13,6 +13,11 @@ namespace lc
 	void runReplCommand(Context& ctx, zbuf::str_view cmd);
 	void parseError(parser::Error e, zbuf::str_view input);
 
+	// util.cpp
+	bool alpha_equivalent(const ast::Expr* a, const ast::Expr* b);
+
+	static void print_replacing_vars(Context& ctx, const ast::Expr* e);
+
 	void evalLine(Context& ctx, zbuf::str_view sv)
 	{
  		auto input = trim(sv);
@@ -27,6 +32,7 @@ namespace lc
 		{
 			runReplCommand(ctx, input);
 			zpr::println("");
+			return;
 		}
 
  		auto expr_or_error = parser::parse(input);
@@ -34,13 +40,13 @@ namespace lc
  			return parseError(expr_or_error.error(), input);
 
 		auto expr = lc::evaluate(ctx, expr_or_error.unwrap(), ctx.flags);
-		zpr::println("{}\n", lc::print(expr, ctx.flags));
+		print_replacing_vars(ctx, expr);
 	}
 
 	void repl(Context& ctx)
 	{
-		// by default, trace.
-		ctx.flags |= FLAG_TRACE;
+		// by default, trace and try to back-substitute variables.
+		ctx.flags |= (FLAG_TRACE | FLAG_VAR_REPLACEMENT);
 
 		while(true)
 		{
@@ -59,6 +65,32 @@ namespace lc
 
 		zpr::println("");
 	}
+
+	static void print_replacing_vars(Context& ctx, const ast::Expr* e)
+	{
+		auto normal = lc::print(e, ctx.flags);
+
+		std::string replaced;
+		if(ctx.flags & FLAG_VAR_REPLACEMENT)
+		{
+			replaced = lc::print(e, [&](const ast::Expr* expr) -> std::optional<std::string> {
+				for(auto& [ name, var ] : ctx.vars)
+				{
+					if(alpha_equivalent(var, expr))
+						return name;
+				}
+
+				return { };
+			}, ctx.flags);
+		}
+
+		zpr::println("{}", normal);
+		if(normal != replaced)
+			zpr::println("= {}", replaced);
+
+		zpr::println("");
+	}
+
 
 
 
@@ -91,12 +123,17 @@ namespace lc
 			ctx.flags ^= FLAG_TRACE;
 			print_thingy("tracing", FLAG_TRACE);
 		}
+		else if(input == ":v")
+		{
+			ctx.flags ^= FLAG_VAR_REPLACEMENT;
+			print_thingy("reverse variable substitution", FLAG_VAR_REPLACEMENT);
+		}
 		else if(input == ":ft")
 		{
 			ctx.flags ^= FLAG_FULL_TRACE;
 			print_thingy("full tracing", FLAG_FULL_TRACE);
 		}
-		else if(input == ":load ")
+		else if(input.find(":load ") == 0)
 		{
 			auto path = trim(input.drop(strlen(":load ")));
 			if(path.empty())

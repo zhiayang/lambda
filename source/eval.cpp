@@ -10,17 +10,18 @@ namespace lc
 {
 	using namespace ast;
 
-	static std::string fresh_name(const std::string& name);
-
-	static std::set<const Var*> find_free_variables(const Expr* expr);
-	static std::map<std::string, Lambda*> find_bound_variables(Expr* expr);
-
-	static std::vector<Expr**> find_substitutions(Expr** expr, const std::string& var);
-	static Lambda* substitute(Lambda* expr, const std::vector<Expr**>& vars, const Expr* value);
+	Expr* replace_vars(const Context& ctx, const std::set<const Var*>& free_vars, const Expr* expr);
+	std::vector<Expr**> find_substitutions(Expr** expr, const std::string& var);
+	Lambda* substitute(Lambda* expr, const std::vector<Expr**>& vars, const Expr* value);
+	std::set<const Var*> find_free_variables(const Expr* expr);
+	std::map<std::string, Lambda*> find_bound_variables(Expr* expr);
+	std::string fresh_name(const std::string& name);
 
 	static Expr* eval(int& step, int print_flags, Expr** whole, Expr** expr);
-	static Expr* alpha_conversion(Expr* lam, const std::string& var, const std::string& fresh);
-	static Expr* beta_reduction(int& step, int print_flags, Expr** whole, Apply* app, Expr** parent);
+
+	bool alpha_equivalent(const Expr* a, const Expr* b);
+	Expr* alpha_conversion(Expr* lam, std::string var, const std::string& fresh);
+	Expr* beta_reduction(int& step, int print_flags, Expr** whole, Apply* app, Expr** parent);
 
 	template <typename Fn, typename PrinterFn, typename... Args>
 	static void do_transform(int print_flags, Fn&& fn, PrinterFn&& printer, Args&&... args)
@@ -49,32 +50,6 @@ namespace lc
 			zpr::println(fmt, static_cast<Args&&>(args)...);
 	}
 
-
-	static Expr* replace_vars(const Context& ctx, const std::set<const Var*>& free_vars, const Expr* expr)
-	{
-		if(auto v = dynamic_cast<const Var*>(expr); v != nullptr)
-		{
-			if(free_vars.find(v) != free_vars.end())
-				if(auto it = ctx.vars.find(v->name); it != ctx.vars.end())
-					return it->second->clone();
-
-			return v->clone();
-		}
-		else if(auto a = dynamic_cast<const Apply*>(expr); a != nullptr)
-		{
-			return new Apply(a->loc, replace_vars(ctx, free_vars, a->fn),
-				replace_vars(ctx, free_vars, a->arg));
-		}
-		else if(auto l = dynamic_cast<const Lambda*>(expr); l != nullptr)
-		{
-			return new Lambda(l->loc, l->argloc,
-				l->arg, replace_vars(ctx, free_vars, l->body));
-		}
-		else
-		{
-			abort();
-		}
-	}
 
 	Expr* evaluate(Context& ctx, const Expr* expr, int print_flags)
 	{
@@ -136,10 +111,7 @@ namespace lc
 		}
 	}
 
-
-
-
-	static Expr* beta_reduction(int& step, int print_flags, Expr** whole, Apply* app, Expr** parent)
+	Expr* beta_reduction(int& step, int print_flags, Expr** whole, Apply* app, Expr** parent)
 	{
 		if(auto func = dynamic_cast<Lambda*>(app->fn); func != nullptr)
 		{
@@ -185,105 +157,19 @@ namespace lc
 				return app;
 			}
 		}
+		else if(auto a = dynamic_cast<Apply*>(app->arg); a != nullptr)
+		{
+			if(auto red = beta_reduction(step, print_flags, whole, a, &app->arg); red != nullptr)
+			{
+				app->arg = red;
+				return app;
+			}
+		}
 
 		return nullptr;
 	}
 
-
-	static std::vector<Expr**> find_substitutions(Expr** expr, const std::string& var)
-	{
-		if(auto v = dynamic_cast<Var*>(*expr); v != nullptr)
-		{
-			if(v->name == var)  return { expr };
-			else                return { };
-		}
-		else if(auto a = dynamic_cast<Apply*>(*expr); a != nullptr)
-		{
-			auto ret = find_substitutions(&a->fn, var);
-			auto tmp = find_substitutions(&a->arg, var);
-			ret.insert(ret.end(), tmp.begin(), tmp.end());
-			return ret;
-		}
-		else if(auto l = dynamic_cast<Lambda*>(*expr); l != nullptr)
-		{
-			// if the lambda here 're-binds' the name, then stop.
-			if(l->arg != var)   return find_substitutions(&l->body, var);
-			else                return { };
-		}
-		else
-		{
-			abort();
-		}
-	}
-
-	static Lambda* substitute(Lambda* expr, const std::vector<Expr**>& vars, const Expr* value)
-	{
-		for(auto v : vars)
-			*v = value->clone();
-
-		return expr;
-	}
-
-	template <bool Bound, typename Retty = std::conditional_t<Bound,
-		std::map<std::string, Lambda*>,
-		std::set<const Var*>
-	>>
-	static Retty _find_variables(std::map<std::string, Lambda*> seen, Expr* expr)
-	{
-		if(auto v = dynamic_cast<Var*>(expr); v != nullptr)
-		{
-			if constexpr (Bound)
-			{
-				if(auto it = seen.find(v->name); it != seen.end())
-					return { *it };
-
-				return { };
-			}
-			else
-			{
-				if(seen.find(v->name) == seen.end())
-					return { v };
-
-				return { };
-			}
-		}
-		else if(auto a = dynamic_cast<Apply*>(expr); a != nullptr)
-		{
-			Retty ret;
-			auto x = _find_variables<Bound>(seen, a->fn);
-			auto y = _find_variables<Bound>(seen, a->arg);
-
-			ret.insert(x.begin(), x.end());
-			ret.insert(y.begin(), y.end());
-			return ret;
-		}
-		else if(auto l = dynamic_cast<Lambda*>(expr); l != nullptr)
-		{
-			seen.insert({ l->arg, l });
-			return _find_variables<Bound>(seen, l->body);
-		}
-		else
-		{
-			abort();
-		}
-	}
-
-	static std::set<const Var*> find_free_variables(const Expr* expr)
-	{
-		return _find_variables<false>({ }, const_cast<Expr*>(expr));
-	}
-
-	static std::map<std::string, Lambda*> find_bound_variables(Expr* expr)
-	{
-		return _find_variables<true>({ }, expr);
-	}
-
-	static std::string fresh_name(const std::string& name)
-	{
-		return name + "'";
-	}
-
-	static Expr* alpha_conversion(Expr* e, const std::string& name, const std::string& fresh)
+	Expr* alpha_conversion(Expr* e, std::string name, const std::string& fresh)
 	{
 		if(auto v = dynamic_cast<Var*>(e); v != nullptr)
 		{

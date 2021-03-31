@@ -21,6 +21,7 @@ namespace lc
 	constexpr int FLAG_NO_PRINT         = 0x8;
 	constexpr int FLAG_TRACE            = 0x10;
 	constexpr int FLAG_FULL_TRACE       = 0x20;
+	constexpr int FLAG_VAR_REPLACEMENT  = 0x40;
 
 	struct Context
 	{
@@ -36,6 +37,8 @@ namespace lc
 		int flags);
 
 	std::string print(const ast::Expr* expr, int flags);
+	std::string print(const ast::Expr* expr, std::function<std::optional<std::string> (const ast::Expr*)> replace,
+		int flags);
 
 	// the reason that these two take Expr** is... complicated.
 	std::pair<std::string, std::string> logBetaReduction(const ast::Expr** whole, const ast::Expr* fn,
