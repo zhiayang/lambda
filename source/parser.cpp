@@ -333,9 +333,14 @@ namespace parser
 			if(st.peek() == TT::RParen || st.peek() == TT::EndOfFile)
 				return lhs;
 
-			auto rhs = parseUnary(st);
-			if(!rhs) return rhs;
+			ResultTy rhs = Err(Error { });
+			if(st.peek() == TT::Dollar)
+				st.pop(), rhs = parseExpr(st);
 
+			else
+				rhs = parseUnary(st);
+
+			if(!rhs) return rhs;
 			lhs = makeAST<ast::Apply>((*lhs)->loc, *lhs, *rhs);
 		}
 	}

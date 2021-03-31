@@ -11,18 +11,6 @@ namespace parser
 	using zst::Ok;
 	using zst::Err;
 
-	static size_t is_valid_first_ident_char(zbuf::str_view str)
-	{
-		auto k = unicode::is_letter(str);
-		if(k > 0) return k;
-
-		// don't use math symbols for obvious reasons
-		k = unicode::is_category(str, { UTF8PROC_CATEGORY_SO });
-		if(k > 0) return k;
-
-		return 0;
-	}
-
 	static size_t is_valid_identifier(zbuf::str_view str)
 	{
 		auto k = unicode::is_letter(str);
@@ -70,9 +58,9 @@ namespace parser
 
 		if      MATCH_MULTICHAR_TOKEN("->", TT::RightArrow)
 		else if MATCH_MULTICHAR_TOKEN("λ", TT::Lambda)
-		else if(src[0] == '_' || (is_valid_first_ident_char(src) > 0))
+		else if(is_valid_identifier(src) > 0)
 		{
-			size_t identLength = (src[0] == '_') ? 1 : is_valid_first_ident_char(src);
+			size_t identLength = is_valid_identifier(src);
 			auto tmp = src.drop(identLength);
 
 			size_t k = 0;
@@ -102,6 +90,7 @@ namespace parser
 				case '(': ret = Token(TT::LParen, loc, src.take(1));    break;
 				case ')': ret = Token(TT::RParen, loc, src.take(1));    break;
 				case '.': ret = Token(TT::Period, loc, src.take(1));    break;
+				case '$': ret = Token(TT::Dollar, loc, src.take(1));    break;
 				case '=': ret = Token(TT::Equal, loc, src.take(1));     break;
 				case '\\': ret = Token(TT::Lambda, loc, src.take(1));   break;
 

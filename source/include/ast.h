@@ -38,6 +38,7 @@ namespace parser
 		Period,
 		Lambda,
 		Equal,
+		Dollar,
 
 		Let,
 		In,

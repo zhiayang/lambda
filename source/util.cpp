@@ -189,13 +189,18 @@ namespace lc
 			// now, we do something dumb -- alpha-rename the second lambda to match the
 			// first lambda (operating on a clone, of course -- since alpha-rename is mutating)
 			// and then just traverse and check.
-			auto copy = l2->clone();
-			alpha_conversion(copy, copy->arg, l1->arg);
-
-			auto ret = alpha_equivalent(l1->body, copy->body);
-			delete copy;
-
-			return ret;
+			if(l1->arg != l2->arg)
+			{
+				auto copy = l2->clone();
+				alpha_conversion(copy, copy->arg, l1->arg);
+				auto ret = alpha_equivalent(l1->body, copy->body);
+				delete copy;
+				return ret;
+			}
+			else
+			{
+				return alpha_equivalent(l1->body, l2->body);
+			}
 		}
 		else
 		{

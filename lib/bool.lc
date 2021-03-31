@@ -1,0 +1,9 @@
+# bool.lc
+# church booleans
+
+let true  = \x y -> x
+let false = \x y -> y
+
+let and = \x y -> x y x
+let or  = \x y -> x x y
+
