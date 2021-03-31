@@ -1,7 +1,7 @@
 ## lambda calculus interpreter
 
 ### what:
-A tiny lambda calculus interpreter written in C++. It supports α-conversion and β-reduction,
+A small lambda calculus interpreter written in C++. It supports α-conversion and β-reduction,
 as well as precise tracing output of replacements and renames.
 
 ### how:
