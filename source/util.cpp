@@ -6,6 +6,7 @@
 #include "defs.h"
 
 #include <set>
+#include <climits>
 
 namespace lc
 {
