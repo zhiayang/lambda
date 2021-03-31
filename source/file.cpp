@@ -8,9 +8,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <filesystem>
-
-namespace std { namespace fs = filesystem; }
 
 static std::vector<zbuf::str_view> split_string(zbuf::str_view view);
 static zst::Result<zbuf::str_view, std::string> read_file_raw(zbuf::str_view path);
@@ -25,9 +22,6 @@ namespace lc
 
 	void loadFile(Context& ctx, zbuf::str_view path)
 	{
-		if(!std::fs::exists(path.sv()))
-			return printError(zpr::sprint("file '{}' does not exist", path));
-
 		auto lines_or_err = read_file_lines(path);
 		if(!lines_or_err)
 			return printError(lines_or_err.error());
