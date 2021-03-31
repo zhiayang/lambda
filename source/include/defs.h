@@ -36,7 +36,7 @@ namespace lc
 		std::function<std::optional<std::string> (const ast::Expr*)> arg_pred,
 		int flags);
 
-	std::string print(const ast::Expr* expr, int flags);
+	std::string print(const ast::Expr* expr, int flags = 0);
 	std::string print(const ast::Expr* expr, std::function<std::optional<std::string> (const ast::Expr*)> replace,
 		int flags);
 

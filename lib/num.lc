@@ -1,0 +1,22 @@
+# num.lc
+# church numerals
+
+# base numbers
+let 0 = \f x -> x
+let 1 = \f x -> f x
+
+let succ = \n f x -> f $ n f x
+
+# m + n
+let plus = \m n f x -> m f $ n f x
+
+# 0 - 10 is all you need right?
+let 2 = succ 1
+let 3 = succ 2
+let 4 = succ 3
+let 5 = succ 4
+let 6 = succ 5
+let 7 = succ 6
+let 8 = succ 7
+let 9 = succ 8
+let 10 = succ 9

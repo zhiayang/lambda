@@ -14,29 +14,56 @@ namespace lc
 	// eval.cpp
 	Expr* alpha_conversion(Expr* e, std::string name, const std::string& fresh);
 
-	Expr* replace_vars(const Context& ctx, const std::set<const Var*>& free_vars, const Expr* expr)
+	// below
+	std::set<const Var*> find_free_variables(const Expr* expr);
+
+	// bool is true if we replaced something.
+	static std::pair<Expr*, bool> replace_vars_once(const Context& ctx, const std::set<const Var*>& free_vars, const Expr* expr)
 	{
 		if(auto v = dynamic_cast<const Var*>(expr); v != nullptr)
 		{
 			if(free_vars.find(v) != free_vars.end())
+			{
 				if(auto it = ctx.vars.find(v->name); it != ctx.vars.end())
-					return it->second->clone();
+					return { it->second->clone(), true };
+			}
 
-			return v->clone();
+			return { v->clone(), false };
 		}
 		else if(auto a = dynamic_cast<const Apply*>(expr); a != nullptr)
 		{
-			return new Apply(a->loc, replace_vars(ctx, free_vars, a->fn),
-				replace_vars(ctx, free_vars, a->arg));
+			auto x = replace_vars_once(ctx, free_vars, a->fn);
+			auto y = replace_vars_once(ctx, free_vars, a->arg);
+			return { new Apply(a->loc, x.first, y.first), x.second || y.second };
 		}
 		else if(auto l = dynamic_cast<const Lambda*>(expr); l != nullptr)
 		{
-			return new Lambda(l->loc, l->argloc,
-				l->arg, replace_vars(ctx, free_vars, l->body));
+			auto body = replace_vars_once(ctx, free_vars, l->body);
+			return { new Lambda(l->loc, l->argloc, l->arg, body.first), body.second };
 		}
 		else
 		{
 			abort();
+		}
+	}
+
+	Expr* replace_vars(const Context& ctx, const Expr* expr)
+	{
+		const Expr* ret = expr;
+		while(true)
+		{
+			auto [ next, changed ] = replace_vars_once(ctx, find_free_variables(ret), ret);
+			if(!changed)
+			{
+				return next;
+			}
+			else
+			{
+				if(ret != expr)
+					delete ret;
+
+				ret = next;
+			}
 		}
 	}
 
@@ -145,17 +172,17 @@ namespace lc
 
 
 	template <typename Container, typename Fn>
-	static auto map(Container&& c, Fn&& func) -> std::vector<decltype(
+	static auto map(Container&& c, Fn&& func) -> std::set<decltype(
 		func(std::declval<typename std::decay_t<Container>::value_type>())
 	)>
 	{
-		std::vector<decltype(func(std::declval<typename std::decay_t<Container>::value_type>()))> ret;
-		std::transform(c.begin(), c.end(), std::back_inserter(ret), func);
+		std::set<decltype(func(std::declval<typename std::decay_t<Container>::value_type>()))> ret;
+		std::transform(c.begin(), c.end(), std::inserter(ret, ret.begin()), func);
 		return ret;
 	}
 
 
-	bool alpha_equivalent(const Expr* a, const Expr* b)
+	static bool alpha_equivalent(const Expr* a, const Expr* b)
 	{
 		// first just even check the type.
 		if(a->type != b->type)
@@ -209,5 +236,15 @@ namespace lc
 
 
 		return false;
+	}
+
+	bool alpha_equivalent(Context& ctx, const Expr* a, const Expr* b)
+	{
+		auto bb = lc::evaluate(ctx, b, /* flags: */ 0);
+
+		bool ret = alpha_equivalent(a, bb);
+		delete bb;
+
+		return ret;
 	}
 }

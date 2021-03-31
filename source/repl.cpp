@@ -14,7 +14,7 @@ namespace lc
 	void parseError(parser::Error e, zbuf::str_view input);
 
 	// util.cpp
-	bool alpha_equivalent(const ast::Expr* a, const ast::Expr* b);
+	bool alpha_equivalent(Context& ctx, const ast::Expr* a, const ast::Expr* b);
 
 	static void print_replacing_vars(Context& ctx, const ast::Expr* e);
 
@@ -76,7 +76,8 @@ namespace lc
 			replaced = lc::print(e, [&](const ast::Expr* expr) -> std::optional<std::string> {
 				for(auto& [ name, var ] : ctx.vars)
 				{
-					if(alpha_equivalent(var, expr))
+					// note that this will evaluate the SECOND ARGUMENT only
+					if(alpha_equivalent(ctx, expr, var))
 						return name;
 				}
 
@@ -85,7 +86,7 @@ namespace lc
 		}
 
 		zpr::println("{}", normal);
-		if(normal != replaced)
+		if((ctx.flags & FLAG_VAR_REPLACEMENT) && normal != replaced)
 			zpr::println("= {}", replaced);
 
 		zpr::println("");

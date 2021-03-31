@@ -10,12 +10,12 @@ namespace lc
 {
 	using namespace ast;
 
-	Expr* replace_vars(const Context& ctx, const std::set<const Var*>& free_vars, const Expr* expr);
 	std::vector<Expr**> find_substitutions(Expr** expr, const std::string& var);
 	Lambda* substitute(Lambda* expr, const std::vector<Expr**>& vars, const Expr* value);
 	std::set<const Var*> find_free_variables(const Expr* expr);
 	std::map<std::string, Lambda*> find_bound_variables(Expr* expr);
 	std::string fresh_name(const std::string& name);
+	Expr* replace_vars(const Context& ctx, const Expr* expr);
 
 	static Expr* eval(int& step, int print_flags, Expr** whole, Expr** expr);
 
@@ -50,7 +50,6 @@ namespace lc
 			zpr::println(fmt, static_cast<Args&&>(args)...);
 	}
 
-
 	Expr* evaluate(Context& ctx, const Expr* expr, int print_flags)
 	{
 		// lets are not an expression that we can evaluate, so don't
@@ -68,7 +67,7 @@ namespace lc
 		}
 
 		// this also makes a clone.
-		auto copy = replace_vars(ctx, find_free_variables(expr), expr);
+		auto copy = replace_vars(ctx, expr);
 		print_trace(print_flags, "{}0.{} {}", BLACK_BOLD, COLOUR_RESET, lc::print(copy, print_flags));
 
 		int step = 1;
