@@ -6,6 +6,7 @@
 #include "defs.h"
 
 #include <set>
+#include <map>
 #include <climits>
 
 namespace lc
@@ -183,7 +184,14 @@ namespace lc
 	}
 
 
-	static bool alpha_equivalent(const Expr* a, const Expr* b)
+	struct CheckState
+	{
+		std::map<std::string, int> var_depths;
+		std::map<std::string, Lambda*> bindings;
+	};
+
+	static bool alpha_equivalent(const Expr* a, const Expr* b, int cur_depth,
+		const CheckState& sta, const CheckState& stb)
 	{
 		// first just even check the type.
 		if(a->type != b->type)
@@ -191,8 +199,8 @@ namespace lc
 
 		// since we are traversing the entire expression from root to leaf,
 		// we only really need to figure out the free variables at the current level.
-		auto free_a = _find_variables</* bound: */ false, /* max_depth: */ 1>({ }, a);
-		auto free_b = _find_variables</* bound: */ false, /* max_depth: */ 1>({ }, b);
+		auto free_a = _find_variables</* bound: */ false, /* max_depth: */ 1>(sta.bindings, a);
+		auto free_b = _find_variables</* bound: */ false, /* max_depth: */ 1>(stb.bindings, b);
 
 		// convert them to names
 		auto foo = [](const Var* v) { return v->name; };
@@ -205,30 +213,31 @@ namespace lc
 
 		if(auto v1 = dynamic_cast<const Var*>(a), v2 = dynamic_cast<const Var*>(b); v1 && v2)
 		{
-			return v1->name == v2->name;
+			auto ia = sta.var_depths.find(v1->name);
+			auto ib = stb.var_depths.find(v2->name);
+
+			if(ia != sta.var_depths.end() && ib != stb.var_depths.end())
+				return ia->second == ib->second;
+
+			return false;
 		}
 		else if(auto a1 = dynamic_cast<const Apply*>(a), a2 = dynamic_cast<const Apply*>(b); a1 && a2)
 		{
-			return alpha_equivalent(a1->fn, a2->fn)
-				&& alpha_equivalent(a1->arg, a2->arg);
+			return alpha_equivalent(a1->fn, a2->fn, cur_depth, sta, stb)
+				&& alpha_equivalent(a1->arg, a2->arg, cur_depth, sta, stb);
 		}
 		else if(auto l1 = dynamic_cast<const Lambda*>(a), l2 = dynamic_cast<const Lambda*>(b); l1 && l2)
 		{
-			// now, we do something dumb -- alpha-rename the second lambda to match the
-			// first lambda (operating on a clone, of course -- since alpha-rename is mutating)
-			// and then just traverse and check.
-			if(l1->arg != l2->arg)
-			{
-				auto copy = l2->clone();
-				alpha_conversion(copy, copy->arg, l1->arg);
-				auto ret = alpha_equivalent(l1->body, copy->body);
-				delete copy;
-				return ret;
-			}
-			else
-			{
-				return alpha_equivalent(l1->body, l2->body);
-			}
+			auto sta1 = sta;
+			auto stb1 = stb;
+
+			sta1.var_depths[l1->arg] = cur_depth;
+			sta1.bindings[l1->arg] = const_cast<Lambda*>(l1);
+
+			stb1.var_depths[l2->arg] = cur_depth;
+			stb1.bindings[l2->arg] = const_cast<Lambda*>(l2);
+
+			return alpha_equivalent(l1->body, l2->body, cur_depth + 1, sta1, stb1);
 		}
 		else
 		{
@@ -243,7 +252,7 @@ namespace lc
 	{
 		auto bb = lc::evaluate(ctx, b, /* flags: */ 0);
 
-		bool ret = alpha_equivalent(a, bb);
+		bool ret = alpha_equivalent(a, bb, 0, { }, { });
 		delete bb;
 
 		return ret;

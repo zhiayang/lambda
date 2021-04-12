@@ -20,3 +20,8 @@ let 7 = succ 6
 let 8 = succ 7
 let 9 = succ 8
 let 10 = succ 9
+
+
+
+# exponentiation
+let exp = \a b -> b a
