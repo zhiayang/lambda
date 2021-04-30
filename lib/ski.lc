@@ -11,3 +11,4 @@ let id = I
 
 let K = \x y -> x
 let S = \x y z -> x z (y z)
+let B = (S (K S)) K

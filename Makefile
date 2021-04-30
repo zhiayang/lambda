@@ -57,6 +57,7 @@ clean:
 	-@find source -iname "*.cpp.o" | xargs rm
 	-@find build -iname "*.a" | xargs rm
 	-@rm $(PRECOMP_GCH)
+	-@rm $(OUTPUT_BIN)
 
 -include $(CXXDEPS)
 -include $(CDEPS)

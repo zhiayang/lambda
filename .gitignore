@@ -5,6 +5,7 @@
 *.dll
 *.cpp.d
 *.c.d
+*.h.d
 *.log
 
 !build/
@@ -21,3 +22,4 @@ dump
 .vscode
 run.fish
 *.code-workspace
+nabs
