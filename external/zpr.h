@@ -43,8 +43,8 @@
 
 
 /*
-	Version 2.1.12
-	==============
+	Version 2.3.1
+	=============
 
 
 
@@ -181,6 +181,49 @@
 
 	Version History
 	===============
+
+	2.3.1 - 01/05/2021
+	------------------
+	Bug fixes:
+	- fix a bug where the #-printing of iterables only printed the first element
+
+
+
+	2.3.0 - 01/05/2021
+	------------------
+	Bug fixes:
+	- change the signature of zpr::sprint(char* buf, size_t sz, str_view fmt, ...);
+	  new signature: to be zpr::sprint(size_t sz, char* buf, str_view fmt, ...)
+
+	  this is necessary because msvc cannot differentiate between sprint(char*, size_t, str_view, ...)
+	  and sprint(str_view, ...), and would complain about an ambiguous overload.
+
+	  This is a potentially breaking change, hence the minor version bump.
+
+
+
+
+	2.2.1 - 01/05/2021
+	------------------
+	Improve the `file_appender` so that newlines are written together with the last part of the buffer in
+	a single call to fwrite() -- this hopefully mitigates lines being broken up right at the newline when
+	printing in multithreaded scenarios.
+
+
+
+	2.2.0 - 27/04/2021
+	------------------
+	Add 'alternate' flag for the iterable printers; if true, then the opening and closing brackets ('[' and ']') and
+	the commas (',') between items are *not* printed. As a reminder, use '{#}' to specify alternate printing mode.
+
+
+
+	2.1.13 - 23/04/2021
+	-------------------
+	Bug fixes:
+	- fix implicit conversion warning on MSVC in number printing
+
+
 
 	2.1.12 - 15/03/2021
 	-------------------
@@ -1397,7 +1440,7 @@ namespace zpr
 			}
 
 			if(value < 0x10)
-				*(--ptr) = hex_digit(value);
+				*(--ptr) = hex_digit(static_cast<int>(value));
 
 			else
 				copy((ptr -= 2), &lookup_table[value * 2]);
@@ -1466,7 +1509,7 @@ namespace zpr
 			}
 
 			if(value < 10)
-				*(--ptr) = (value + '0');
+				*(--ptr) = static_cast<char>(value + '0');
 
 			else
 				copy((ptr -= 2), &lookup_table[value * 2]);
@@ -1682,20 +1725,34 @@ namespace zpr
 			inline void flush(bool last = false)
 			{
 				if(!last && static_cast<size_t>(ptr - buf) < Limit)
+				{
+					if constexpr (Newline)
+						this->buf[ptr - buf] = '\n';
+
 					return;
+				}
 
-				fwrite(buf, sizeof(char), ptr - buf, fd);
-				written += ptr - buf;
+				if(!last || !Newline)
+				{
+					fwrite(buf, sizeof(char), ptr - buf, fd);
+					written += ptr - buf;
 
-				if(last && Newline)
-					written++, fputc('\n', fd);
+					ptr = buf;
+				}
+				else if(last && Newline)
+				{
+					// here's a special trick -- write one extra, because we always ensure that
+					// "one-past" the last character in our buffer is a newline.
+					fwrite(buf, sizeof(char), ptr - buf + 1, fd);
+					written += (ptr - buf) + 1;
 
-				ptr = buf;
+					ptr = buf;
+				}
 			}
 
 			FILE* fd = 0;
 
-			char buf[Limit];
+			char buf[Limit + 1];
 			char* ptr = &buf[0];
 			size_t& written;
 		};
@@ -1809,7 +1866,7 @@ namespace zpr
 	}
 
 	template <typename... Args>
-	size_t sprint(char* buf, size_t len, tt::str_view fmt, Args&&... args)
+	size_t sprint(size_t len, char* buf, tt::str_view fmt, Args&&... args)
 	{
 		auto appender = detail::buffer_appender(buf, len);
 		detail::print(appender, fmt,
@@ -2177,21 +2234,34 @@ namespace zpr
 		{
 			if(begin(x) == end(x))
 			{
-				cb("[ ]");
+				if(!args.alternate())
+					cb("[ ]");
 				return;
 			}
 
-			cb("[");
+			if(!args.alternate())
+				cb("[");
+
 			for(auto it = begin(x);;)
 			{
 				detail::print_one(static_cast<Cb&&>(cb), args, *it);
 				++it;
 
-				if(it != end(x)) cb(", ");
-				else             break;
+				if(it != end(x))
+				{
+					if(!args.alternate())
+						cb(", ");
+					else
+						cb(" ");
+				}
+				else
+				{
+					break;
+				}
 			}
 
-			cb("]");
+			if(!args.alternate())
+				cb("]");
 		}
 	};
 
