@@ -3,6 +3,8 @@
 // Licensed under the Apache License Version 2.0.
 
 #include <set>
+#include <iterator>
+#include <algorithm>
 #include <functional>
 
 #include "ast.h"
@@ -171,11 +173,10 @@ namespace lc
 		std::function<std::optional<std::string> (const ast::Expr*)> pred,
 		std::function<std::optional<std::string> (const ast::Expr*)> arg_pred, int flags)
 	{
-		State st {
-			.pred = std::move(pred),
-			.arg_pred = std::move(arg_pred),
-			.flags = flags
-		};
+		State st { };
+		st.pred = std::move(pred),
+		st.flags = flags;
+		st.arg_pred = std::move(arg_pred);
 
 		std::string top, bot;
 		int_highlight(st, expr, top, bot);
@@ -227,12 +228,11 @@ namespace lc
 	std::string print(const ast::Expr* expr, std::function<std::optional<std::string> (const ast::Expr*)> replace,
 		int flags)
 	{
-		State st {
-			.pred = [](auto) { return std::nullopt; },
-			.arg_pred = [](auto) { return std::nullopt; },
-			.replacer = std::move(replace),
-			.flags = flags
-		};
+		State st { };
+		st.pred = [](auto) { return std::nullopt; };
+		st.arg_pred = [](auto) { return std::nullopt; };
+		st.replacer = std::move(replace);
+		st.flags = flags;
 
 		std::string top, bot;
 		int_highlight(st, expr, top, bot);

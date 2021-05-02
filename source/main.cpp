@@ -42,7 +42,6 @@ int main(int argc, char** argv)
 
 
 
-
 /*
 B   = \x y z -> x (y z)
 B   = S (KS) K

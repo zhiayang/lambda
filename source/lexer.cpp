@@ -97,8 +97,8 @@ namespace parser
 				default: {
 					auto sz = unicode::get_codepoint_length(src);
 					return Err(Error {
-						.msg = zpr::sprint("invalid token '{}'", src.take(sz)),
-						.loc = Location { idx, 1 }
+						zpr::sprint("invalid token '{}'", src.take(sz)),
+						Location { idx, 1 }
 					});
 				}
 			}

@@ -189,7 +189,7 @@ namespace parser
 
 	static ResultTy make_error(Location loc, const std::string& msg)
 	{
-		return Err(Error { .msg = msg, .loc = loc });
+		return Err(Error { msg, loc });
 	}
 
 	static ResultTy parseLet(State& st);
@@ -300,8 +300,7 @@ namespace parser
 			if(!body) return body;
 
 			return makeAST<ast::Lambda>(Location {
-				.begin = l.begin,
-				.length = (*body)->loc.begin + (*body)->loc.length - l.begin
+				l.begin, (*body)->loc.begin + (*body)->loc.length - l.begin
 			}, arg.loc, arg.text.str(), body);
 		}
 		else if(st.peek() == TT::Identifier)
@@ -311,8 +310,7 @@ namespace parser
 			if(!sub) return sub;
 
 			return makeAST<ast::Lambda>(Location {
-				.begin = l.begin,
-				.length = (*sub)->loc.begin + (*sub)->loc.length - l.begin
+				l.begin, (*sub)->loc.begin + (*sub)->loc.length - l.begin
 			}, arg.loc, arg.text.str(), sub);
 		}
 		else

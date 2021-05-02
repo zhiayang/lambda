@@ -8,6 +8,8 @@
 #include <set>
 #include <map>
 #include <climits>
+#include <iterator>
+#include <algorithm>
 
 namespace lc
 {
